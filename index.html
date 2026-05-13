@@ -81,7 +81,6 @@
         
         .team-blue.selected { background: var(--blue); color: black; box-shadow: 0 0 20px var(--blue); }
         .team-red.selected { background: var(--red); color: black; box-shadow: 0 0 20px var(--red); }
-
         .join-btn {
             width: 100%;
             padding: 18px;
@@ -94,10 +93,8 @@
             cursor: pointer;
             box-shadow: 0 10px 20px rgba(255,255,255,0.2);
         }
-
         /* Game Screen */
         #game-screen { display: none; width: 100%; height: 100%; flex-direction: column; }
-        .game-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .answers-grid {
             flex: 1;
             display: grid;
@@ -139,7 +136,6 @@
     </style>
 </head>
 <body>
-
     <!-- Setup Screen -->
     <div id="setup-screen" class="container">
         <div class="glass-card">
@@ -152,7 +148,6 @@
             <button class="join-btn" onclick="joinGame()">دخول الميدان</button>
         </div>
     </div>
-
     <!-- Game Screen -->
     <div id="game-screen">
         <div id="answers-grid" class="answers-grid">
@@ -166,7 +161,6 @@
             <div id="wait-message" style="font-size: 1.5rem; font-weight: bold;">انتظر دور فريقك...</div>
         </div>
     </div>
-
     <script>
         const firebaseConfig = {
           apiKey: "AIzaSyBUAxYzTUEhWrxc773V7Pz1B6w5bf2ry8c",
@@ -178,21 +172,17 @@
           appId: "1:1033487304960:web:534f6e0d6d0072c2a38be5",
           measurementId: "G-P0JK6TXWD9"
         };
-
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room');
         let selectedTeam = 0;
         let playerName = "";
-
         function selectTeam(teamId) {
             selectedTeam = teamId;
             document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
             document.querySelector(teamId === 1 ? '.team-blue' : '.team-red').classList.add('selected');
         }
-
         function joinGame() {
             playerName = document.getElementById('player-name').value.trim();
             if (!playerName || selectedTeam === 0) {
@@ -204,21 +194,24 @@
                 return;
             }
             
+            // تسجيل اللاعب في قاعدة البيانات لكي يظهر على شاشة الكمبيوتر
+            database.ref('rooms/' + roomId + '/joins').push({
+                name: playerName,
+                teamId: selectedTeam,
+                timestamp: Date.now()
+            });
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
             
             startSync();
         }
-
         function startSync() {
             const roomRef = database.ref('rooms/' + roomId);
             roomRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (!data) return;
-
                 const isMyTurn = data.currentTurn === selectedTeam;
                 const question = data.question;
-
                 if (isMyTurn && question && data.status === 'playing') {
                     document.getElementById('wait-overlay').style.display = 'none';
                     const buttons = document.querySelectorAll('.answer-btn');
@@ -228,11 +221,9 @@
                             buttons[i].style.display = 'flex';
                         }
                     });
-                    // Hide extra buttons if fewer than 4 answers
                     for(let i = question.answers.length; i < 4; i++) {
                         if (buttons[i]) buttons[i].style.display = 'none';
                     }
-                    // Removed status bar text update
                 } else {
                     document.getElementById('wait-overlay').style.display = 'flex';
                     document.getElementById('wait-message').innerText = 
@@ -240,7 +231,6 @@
                 }
             });
         }
-
         function sendAnswer(index) {
             if (!roomId) return;
             database.ref('rooms/' + roomId + '/inputs').push({
@@ -249,11 +239,11 @@
                 teamId: selectedTeam,
                 timestamp: Date.now()
             });
-            // Show feedback
             document.getElementById('wait-overlay').style.display = 'flex';
             document.getElementById('wait-message').innerText = "تم إرسال الإجابة! ✅";
         }
     </script>
 </body>
 </html>
-        
+   
+ 
