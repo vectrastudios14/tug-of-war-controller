@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tug of War - Controller</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --blue: #00f2ff;
+            --red: #ff4d4d;
+            --bg: #0a0a0c;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        html, body {
+            background: var(--bg);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed; 
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            margin: auto;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        #setup-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        #game-screen { 
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; 
+            height: 100%; 
+            flex-direction: column;
+            padding: 8px;
+        }
+
+        .answers-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .answer-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: clamp(0.9rem, 4.5vw, 1.3rem);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+            transition: 0.1s;
+            overflow: hidden;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .answer-btn:active { transform: scale(0.98); background: rgba(255,255,255,0.2); }
+        
+        .wait-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10,10,12,0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+
+        .team-select {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .team-btn {
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .team-blue { background: rgba(0, 242, 255, 0.1); border-color: rgba(0, 242, 255, 0.3); color: var(--blue); }
+        .team-red { background: rgba(255, 77, 77, 0.1); border-color: rgba(255, 77, 77, 0.3); color: var(--red); }
+        .team-blue.selected { background: var(--blue); color: black; }
+        .team-red.selected { background: var(--red); color: black; }
+
+        .join-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 50px;
+            background: white;
+            color: black;
+            font-weight: 900;
+            font-size: 1.1rem;
+            border: none;
+        }
+
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <div class="container">
+            <div class="glass-card">
+                <h1 style="margin-bottom:15px; font-size:1.5rem;">انضم للمسابقة ⚔️</h1>
+                <input type="text" id="player-name" placeholder="أدخل اسمك..." maxlength="15">
+                <div class="team-select">
+                    <div class="team-btn team-blue" onclick="selectTeam(1)">الفريق الأزرق</div>
+                    <div class="team-btn team-red" onclick="selectTeam(2)">الفريق الأحمر</div>
+                </div>
+                <button class="join-btn" onclick="joinGame()">دخول الميدان</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <div id="answers-grid" class="answers-grid">
+            <div class="answer-btn" onclick="sendAnswer(0)"></div>
+            <div class="answer-btn" onclick="sendAnswer(1)"></div>
+            <div class="answer-btn" onclick="sendAnswer(2)"></div>
+            <div class="answer-btn" onclick="sendAnswer(3)"></div>
+        </div>
+        <div id="wait-overlay" class="wait-overlay">
+            <div class="pulse" style="font-size: 3rem; margin-bottom: 20px;">⏳</div>
+            <div id="wait-message" style="font-size: 1.3rem; font-weight: bold;">انتظر دور فريقك...</div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyBUAxYzTUEhWrxc773V7Pz1B6w5bf2ry8c",
+          authDomain: "tug-of-war-quiz-3b5c2.firebaseapp.com",
+          databaseURL: "https://tug-of-war-quiz-3b5c2-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "tug-of-war-quiz-3b5c2",
+          storageBucket: "tug-of-war-quiz-3b5c2.firebasestorage.app",
+          messagingSenderId: "1033487304960",
+          appId: "1:1033487304960:web:534f6e0d6d0072c2a38be5",
+          measurementId: "G-P0JK6TXWD9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room');
+        let selectedTeam = 0;
+        let playerName = "";
+
+        function selectTeam(teamId) {
+            selectedTeam = teamId;
+            document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelector(teamId === 1 ? '.team-blue' : '.team-red').classList.add('selected');
+        }
+
+        function joinGame() {
+            playerName = document.getElementById('player-name').value.trim();
+            if (!playerName || selectedTeam === 0) {
+                alert("يرجى إدخال الاسم واختيار فريق!");
+                return;
+            }
+            if (!roomId) {
+                alert("رمز الغرفة غير صحيح!");
+                return;
+            }
+            
+            database.ref('rooms/' + roomId + '/joins').push({
+                name: playerName,
+                teamId: selectedTeam,
+                timestamp: Date.now()
+            });
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            
+            startSync();
+        }
+
+        function startSync() {
+            const roomRef = database.ref('rooms/' + roomId);
+            roomRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+
+                const isMyTurn = data.currentTurn === selectedTeam;
+                const question = data.question;
+
+                if (isMyTurn && question && data.status === 'playing') {
+                    document.getElementById('wait-overlay').style.display = 'none';
+                    const buttons = document.querySelectorAll('.answer-btn');
+                    question.answers.forEach((ans, i) => {
+                        if (buttons[i]) {
+                            buttons[i].innerText = ans;
+                            buttons[i].style.display = 'flex';
+                        }
+                    });
+                    for(let i = question.answers.length; i < 4; i++) {
+                        if (buttons[i]) buttons[i].style.display = 'none';
+                    }
+                } else {
+                    document.getElementById('wait-overlay').style.display = 'flex';
+                    document.getElementById('wait-message').innerText = 
+                        data.status === 'playing' ? "دور الفريق الآخر..." : "في انتظار السؤال...";
+                }
+            });
+        }
+
+        function sendAnswer(index) {
+            if (!roomId) return;
+            database.ref('rooms/' + roomId + '/inputs').push({
+                answerIndex: index,
+                playerName: playerName,
+                teamId: selectedTeam,
+                timestamp: Date.now()
+            });
+            document.getElementById('wait-overlay').style.display = 'flex';
+            document.getElementById('wait-message').innerText = "تم إرسال الإجابة! ✅";
+        }
+    </script>
+</body>
+</html>
