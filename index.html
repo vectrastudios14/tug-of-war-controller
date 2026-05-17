@@ -304,6 +304,8 @@
                         } else {
                             document.getElementById('wait-message').innerText = "الفريق الآخر يستلم قدرة خاصة... ⚡";
                         }
+                    } else if (data.status === 'powerup_revealing') {
+                        document.getElementById('wait-message').innerText = "جاري السحب العشوائي للقدرة الخاصة على الشاشة الرئيسية... 🎰⚡";
                     } else if (data.status === 'powerup_picker') {
                         if (data.powerUpPicker && data.powerUpPicker.teamId === selectedTeam) {
                             document.getElementById('wait-message').innerText = "مطلوب اتخاذ قرار استراتيجي:";
